@@ -432,8 +432,6 @@ hyperv-panel/
 │   │   └── main.jsx         # App entry point
 │   ├── dist/                # Production build output
 │   └── vite.config.js       # Vite configuration
-├── DDOS_PROTECTION.md       # DDoS feature documentation
-├── TESTING_GUIDE.md         # Testing instructions
 └── README.md                # This file
 ```
 
