@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* FiveM Shield theme tokens (from index1.html) */
+  --bg: #080c10;
+  --bg2: #0d1219;
+  --bg3: #111820;
+  --border: #1e2d3d;
+  --border-bright: #2a4060;
+  --accent: #00d4ff;
+  --danger: #ff3b5c;
+  --warn: #ffb300;
+  --safe: #00e676;
+  --purple: #7b4fff;
+  --text: #c8d8e8;
+  --text-dim: #5a7a9a;
+  --text-bright: #e8f4ff;
+  --mono: 'Share Tech Mono', monospace;
+  --condensed: 'Barlow Condensed', sans-serif;
+  --sans: 'Barlow', sans-serif;
+
+  /* Backwards-compatible tokens for existing Tailwind-ish styles */
+  --surface-900: var(--bg);
+  --surface-800: var(--bg2);
+  --surface-700: var(--bg3);
+  --surface-600: #1c2330;
+  --surface-500: #232c3d;
+  --surface-400: #2e3a50;
+  --accent-primary: var(--accent);
+  --accent-glow: #40e1ff;
+  --text-primary: var(--text);
+  --text-secondary: var(--text-dim);
+  --text-muted: #64748b;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Subtle cyan grid overlay like index1.html */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--surface-800); }
+::-webkit-scrollbar-thumb { background: var(--surface-400); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-primary); }
+
+/* Status badge glow effects */
+.status-running {
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+}
+.status-stopped {
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
+}
+.status-paused {
+  box-shadow: 0 0 8px rgba(234, 179, 8, 0.3);
+}
+
+/* Panel hover effect */
+.vm-card:hover {
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+
+/* Scanline effect for terminal feel */
+.terminal-bg {
+  background: linear-gradient(
+    transparent 50%, 
+    rgba(0, 0, 0, 0.03) 50%
+  );
+  background-size: 100% 4px;
+}
+
+/* Glow button */
+.btn-glow:hover {
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.4);
+}
+
+/* Grid pattern background */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Number ticker animation */
+@keyframes ticker {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.ticker { animation: ticker 0.3s ease-out; }
+
+/* Progress bar shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.progress-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255,255,255,0.1) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
