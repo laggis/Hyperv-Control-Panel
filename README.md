@@ -536,33 +536,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## 📞 Support
-
-For issues, questions, or suggestions:
-
-- 📧 Email: support@yourdomain.com
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/hyperv-panel/issues)
-- 💬 Discord: [Join our server](https://discord.gg/yourserver)
-
----
-
-## 🗺️ Roadmap
-
-### Planned Features
-
-- [ ] Multi-server support (manage multiple Hyper-V hosts)
-- [ ] VM templates and cloning
-- [ ] Scheduled VM operations
-- [ ] Resource usage reports and analytics
-- [ ] VM backup/export functionality
-- [ ] Custom dashboard widgets
-- [ ] REST API webhooks
-- [ ] Mobile app (iOS/Android)
-- [ ] Dark/Light theme toggle
-- [ ] Multi-language support
-
----
-
 ## ⚡ Performance Tips
 
 ### For Large Deployments
