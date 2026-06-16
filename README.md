@@ -64,7 +64,7 @@ A modern, full-featured web-based management panel for Microsoft Hyper-V virtual
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/hyperv-panel.git
+git clone [https://github.com/yourusername/hyperv-panel.git](https://github.com/laggis/Hyperv-Control-Panel.git)
 cd hyperv-panel
 ```
 
@@ -591,10 +591,6 @@ For issues, questions, or suggestions:
    ```
 
 ---
-
-## 🔐 Security Disclosure
-
-If you discover a security vulnerability, please email security@yourdomain.com instead of using the issue tracker. We will respond within 48 hours.
 
 ---
 
