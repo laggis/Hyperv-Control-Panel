@@ -44,22 +44,35 @@ app.use(cors({
 }));
 
 // Rate limiting
+// /api/health is a lightweight polling endpoint — exempt it entirely
+// Authenticated users (any role) are also exempt: the dashboard polls /api/vms
+// every 10 s and /api/health every 15 s, which easily exceeds 100 req/15 min
+// for non-admin roles under the old logic.
+// Unauthenticated / invalid-token requests are still capped to prevent abuse.
+const jwt = require('jsonwebtoken');
+
+function decodeRole(req) {
+  try {
+    const authHeader = req.headers['authorization'] || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (!token) return null;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    return decoded?.role || null;
+  } catch {
+    return null;
+  }
+}
+
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX) || 100,
+  max: parseInt(process.env.RATE_LIMIT_MAX) || 200,
   message: { error: 'Too many requests, please try again later.' },
   skip: (req) => {
-    // Skip rate limiting for admin users — they need frequent polling
-    try {
-      const jwt = require('jsonwebtoken');
-      const authHeader = req.headers['authorization'] || '';
-      const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-      if (!token) return false;
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
-      return decoded?.role === 'admin';
-    } catch {
-      return false;
-    }
+    // Always skip the health endpoint — it's polled constantly by the dashboard
+    if (req.path === '/health') return true;
+    // Skip for any authenticated user — dashboard polling must not be throttled
+    const role = decodeRole(req);
+    return role !== null;
   },
 });
 app.use('/api/', limiter);

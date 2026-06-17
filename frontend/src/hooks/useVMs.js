@@ -31,7 +31,8 @@ export function useVMs(pollInterval = 5000) {
 
   useEffect(() => {
     fetch();
-    // Background poll every 5s — queries only assigned VMs from Hyper-V
+    // Background poll — default 10 s to keep request count well under the rate limit.
+    // The dashboard passes 10000; callers that need tighter refresh can pass a lower value.
     intervalRef.current = setInterval(() => fetch(true), pollInterval);
     return () => {
       clearInterval(intervalRef.current);

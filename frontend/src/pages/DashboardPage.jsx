@@ -19,7 +19,7 @@ function formatUptime(uptimeObj) {
 }
 
 export default function DashboardPage() {
-  const { vms, loading, error, lastUpdated, refresh } = useVMs(5000);
+  const { vms, loading, error, lastUpdated, refresh } = useVMs(10000);
   const { user } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
@@ -43,7 +43,7 @@ export default function DashboardPage() {
       }
     };
     loadHealth();
-    const iv = setInterval(loadHealth, 10000);
+    const iv = setInterval(loadHealth, 15000);
     return () => { alive = false; clearInterval(iv); };
   }, []);
 
