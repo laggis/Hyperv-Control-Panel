@@ -682,7 +682,7 @@ export default function ClientsPage() {
   const load = useCallback(async () => {
     try {
       const [c, a, v] = await Promise.all([
-        api.listClients(), api.getAllAssignments(), api.listVMs(),
+        api.listClients(), api.getAllAssignments(), api.listVMNames(),
       ]);
       setClients(c);
       setAssignments(a);

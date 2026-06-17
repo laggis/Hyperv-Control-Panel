@@ -147,6 +147,7 @@ export const getVmRoots = () => api.get('/vms/roots').then(r => r.data);
 export const addVmRoot = (path) => api.post('/vms/roots', { path }).then(r => r.data);
 export const deleteVmRoot = (id) => api.delete(`/vms/roots/${id}`).then(r => r.data);
 export const discoverVMs = () => api.get('/vms/discover').then(r => r.data);
+export const listVMNames = () => api.get('/vms/names').then(r => r.data);
 
 // Settings
 export const getSettings = () => api.get('/settings').then(r => r.data);

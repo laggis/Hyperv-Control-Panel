@@ -169,6 +169,27 @@ router.post('/roots', requireAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// GET /vms/names — ultra-fast name list for assignment dropdowns (no VHD pass, no metrics)
+// Returns { Name, State, is_assigned } for every VM on the host.
+router.get('/names', requireAdmin, async (req, res) => {
+  try {
+    const [vms, userAssignments, clientAssignments] = await Promise.all([
+      ps.listVMNames(),
+      db.all('SELECT DISTINCT vm_name FROM user_vm_access'),
+      db.all('SELECT DISTINCT vm_name FROM vm_client_assignments'),
+    ]);
+    const assigned = new Set([
+      ...userAssignments.map(r => r.vm_name),
+      ...clientAssignments.map(r => r.vm_name),
+    ]);
+    res.json(vms.map(vm => ({
+      Name:        vm.Name,
+      State:       vm.State,
+      is_assigned: assigned.has(vm.Name),
+    })));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // GET /vms/discover — list ALL VMs from Hyper-V (for admin to manually assign)
 router.get('/discover', requireAdmin, async (req, res) => {
   try {

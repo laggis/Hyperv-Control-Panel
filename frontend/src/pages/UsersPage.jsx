@@ -122,7 +122,7 @@ function ManageAccessModal({ user, onClose, onDone }) {
     (async () => {
       setLoading(true);
       try {
-        const [vms, assigned] = await Promise.all([api.listVMs(), api.listUserVMs(user.id)]);
+        const [vms, assigned] = await Promise.all([api.listVMNames(), api.listUserVMs(user.id)]);
         setAllVMs(vms || []);
         setSelected(new Set(assigned || []));
       } catch (err) {
@@ -247,7 +247,7 @@ function CreateUserModal({ onDone, onClose }) {
   useEffect(() => {
     (async () => {
       try {
-        const list = await api.listVMs();
+        const list = await api.listVMNames();
         setVMs(list || []);
       } catch {}
     })();

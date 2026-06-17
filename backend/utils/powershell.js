@@ -92,6 +92,15 @@ async function listVMs() {
   return mapVmList(parseJsonSafe(result.output));
 }
 
+// Ultra-fast name-only list — no VHD pass, no metrics, just Name+State+Path+ConfigurationLocation.
+// Used for assignment dropdowns where we only need to know what VMs exist.
+async function listVMNames() {
+  const script = `Get-VM | Select-Object Name, State, Path, ConfigurationLocation | ConvertTo-Json -Depth 2`;
+  const result = await runPS(script, 15000);
+  if (!result.success) throw new Error(result.error);
+  return parseJsonSafe(result.output);
+}
+
 // Fast query for specific VMs by name — much faster than listing all VMs
 async function listSpecificVMs(vmNames) {
   if (!vmNames || vmNames.length === 0) return [];
@@ -465,6 +474,7 @@ async function getVMGuid(vmName) {
 
 module.exports = {
   listVMs,
+  listVMNames,
   listSpecificVMs,
   getVMDetails,
   startVM,
