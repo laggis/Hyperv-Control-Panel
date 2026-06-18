@@ -632,14 +632,47 @@ async function getVMDvdDrive(vmName) {
 
 async function getNetworkMetrics(vmName) {
   const name = sanitizeVMName(vmName);
-  const result = await runPS(
-    `$adapters = Get-VMNetworkAdapter -VMName '${name}'; $out = @(); foreach ($a in $adapters) { $out += [PSCustomObject]@{ AdapterName=$a.Name; BytesReceived=$a.BandwidthSetting.DefaultFlowMinimumBandwidthAbsolute; MbpsReceived=0; MbpsSent=0 } }; Get-VMNetworkAdapterExtendedAcl -VMName '${name}' -ErrorAction SilentlyContinue | Out-Null; $counters = Get-Counter -Counter "\\Hyper-V Virtual Network Adapter(*)*" -ErrorAction SilentlyContinue; if ($counters) { $out | ConvertTo-Json -Depth 2 } else { $adapters | Select-Object Name, @{N='MacAddress';E={$_.MacAddress}}, @{N='IPAddresses';E={$_.IPAddresses -join ','}}, @{N='Connected';E={$_.Connected}} | ConvertTo-Json -Depth 2 }`
-  );
-  // Fallback — use simpler perf counter approach
-  const result2 = await runPS(
-    `$vm = '${name}'; $adapters = Get-VMNetworkAdapter -VMName $vm -ErrorAction SilentlyContinue; if (-not $adapters) { Write-Output '[]'; return }; $out = @(); foreach ($a in $adapters) { $out += [PSCustomObject]@{ Name=$a.Name; MacAddress=$a.MacAddress; SwitchName=$a.SwitchName; Connected=$a.Connected; IPAddresses=($a.IPAddresses -join ',') } }; ConvertTo-Json -InputObject $out -Depth 2`
-  );
-  if (!result2.success) return [];
-  return parseJsonSafe(result2.output);
+  const psName = name.replace(/'/g, "''");
+
+  // Hyper-V does not expose live per-VM Mbps directly from Get-VMNetworkAdapter.
+  // Use Resource Metering + Meter ACLs to get cumulative inbound/outbound bytes.
+  // The API route stores samples and calculates Mbps from the byte delta.
+  const script = [
+    `$vmName = '${psName}'`,
+    `$script:warnings = @()`,
+    `$script:addedMeters = $false`,
+    `$vm = Get-VM -Name $vmName -ErrorAction Stop`,
+    `try { Enable-VMResourceMetering -VMName $vmName -ErrorAction SilentlyContinue | Out-Null } catch { $script:warnings += ('Enable-VMResourceMetering: ' + $_.Exception.Message) }`,
+    `$adapters = @(Get-VMNetworkAdapter -VMName $vmName -ErrorAction SilentlyContinue)`,
+    `$acl = @(Get-VMNetworkAdapterAcl -VMName $vmName -ErrorAction SilentlyContinue)`,
+    `function Ensure-MeterAcl($direction, $remote) { $exists = @($acl | Where-Object { ([string]$_.Action) -eq 'Meter' -and ([string]$_.Direction) -eq $direction -and ([string]$_.RemoteIPAddress) -eq $remote }).Count -gt 0; if (-not $exists) { try { Add-VMNetworkAdapterAcl -VMName $vmName -Direction $direction -Action Meter -RemoteIPAddress $remote -ErrorAction Stop | Out-Null; $script:addedMeters = $true } catch { $script:warnings += ('Add meter ACL ' + $direction + ' ' + $remote + ': ' + $_.Exception.Message) } } }`,
+    `Ensure-MeterAcl 'Inbound' '0.0.0.0/0'`,
+    `Ensure-MeterAcl 'Outbound' '0.0.0.0/0'`,
+    `Ensure-MeterAcl 'Inbound' '::/0'`,
+    `Ensure-MeterAcl 'Outbound' '::/0'`,
+    `$measurement = $null`,
+    `try { $measurement = Measure-VM -Name $vmName -ErrorAction Stop } catch { $script:warnings += ('Measure-VM: ' + $_.Exception.Message) }`,
+    `$reports = @()`,
+    `if ($measurement -and $measurement.NetworkMeteredTrafficReport) { $reports = @($measurement.NetworkMeteredTrafficReport) }`,
+    `[UInt64]$inbound = 0`,
+    `[UInt64]$outbound = 0`,
+    `foreach ($r in $reports) { [UInt64]$bytes = 0; try { $bytes = [UInt64]$r.TotalTraffic } catch {}; $direction = [string]$r.Direction; if ($direction -match 'Inbound') { $inbound += $bytes } elseif ($direction -match 'Outbound') { $outbound += $bytes } }`,
+    `$adapterOut = @($adapters | Select-Object Name, SwitchName, MacAddress, Status, Connected, @{N='IPAddresses';E={$_.IPAddresses -join ','}})`,
+    `$reportOut = @($reports | Select-Object Direction, LocalAddress, RemoteAddress, TotalTraffic)`,
+    `$out = [PSCustomObject]@{ vm_name=$vmName; state=[string]$vm.State; timestamp=(Get-Date).ToUniversalTime().ToString('o'); resource_metering_enabled=$true; meter_acls_added=$script:addedMeters; inbound_bytes=[double]$inbound; outbound_bytes=[double]$outbound; BytesReceived=[double]$inbound; BytesSent=[double]$outbound; adapters=$adapterOut; reports=$reportOut; warnings=$script:warnings }`,
+    `ConvertTo-Json -InputObject $out -Depth 6`,
+  ].join('; ');
+
+  const result = await runPS(script, 30000);
+  if (!result.success) throw new Error(result.error);
+  const parsed = parseJsonSafe(result.output);
+  const metrics = parsed[0] || {};
+  return {
+    ...metrics,
+    inbound_bytes: Number(metrics.inbound_bytes ?? metrics.BytesReceived ?? 0) || 0,
+    outbound_bytes: Number(metrics.outbound_bytes ?? metrics.BytesSent ?? 0) || 0,
+    adapters: Array.isArray(metrics.adapters) ? metrics.adapters : (metrics.adapters ? [metrics.adapters] : []),
+    reports: Array.isArray(metrics.reports) ? metrics.reports : (metrics.reports ? [metrics.reports] : []),
+  };
 }
 

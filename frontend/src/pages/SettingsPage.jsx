@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from '../components/Toast';
 import { Spinner } from '../components/UI';
-import { getSettings, setShowAllVMs, setIsoFolder, saveSMTP, saveBranding, saveConsoleSettings, getVmRoots, addVmRoot, deleteVmRoot, getDiscordWhitelist, addDiscordWhitelist, removeDiscordWhitelist, setDiscordWhitelistEnabled } from '../api';
+import { getSettings, setShowAllVMs, setIsoFolder, saveSMTP, testSMTP, saveBranding, saveConsoleSettings, getVmRoots, addVmRoot, deleteVmRoot, getDiscordWhitelist, addDiscordWhitelist, removeDiscordWhitelist, setDiscordWhitelistEnabled } from '../api';
 import { Check, Plus, Trash2, FolderPlus, Mail, Server, Disc, Save, Palette, Monitor, ShieldCheck } from 'lucide-react';
 
 function Section({ title, icon: Icon, children }) {
@@ -89,6 +89,42 @@ export default function SettingsPage() {
       toast.success('SMTP settings saved');
     } catch { toast.error('Save failed'); }
     finally { setBusy(''); }
+  };
+
+  const handleTestSMTP = async () => {
+    const email = window.prompt('Send SMTP test email to:');
+    const to = email?.trim();
+
+    if (!to) return;
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+      toast.error('Enter a valid email address');
+      return;
+    }
+
+    setBusy('smtp-test');
+    try {
+      const result = await testSMTP(to);
+
+      if (result?.sent || result?.success) {
+        toast.success(`SMTP test email sent to ${to}`);
+      } else {
+        const errorText = Array.isArray(result?.errors)
+          ? result.errors.join('; ')
+          : result?.error || 'SMTP test failed';
+
+        toast.error(errorText);
+      }
+    } catch (err) {
+      const data = err.response?.data;
+      const errorText = Array.isArray(data?.errors)
+        ? data.errors.join('; ')
+        : data?.error || err.message || 'SMTP test failed';
+
+      toast.error(errorText);
+    } finally {
+      setBusy('');
+    }
   };
 
   const handleSaveBranding = async () => {
@@ -462,7 +498,12 @@ export default function SettingsPage() {
                 placeholder="HyperV Panel <alerts@example.com>" className={inputCls} />
             </div>
           </div>
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <button onClick={handleTestSMTP} disabled={busy === 'smtp-test' || busy === 'smtp'}
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#151a22] hover:bg-slate-800 text-slate-200 border border-slate-700 text-sm font-mono rounded-lg transition-all disabled:opacity-60">
+              {busy === 'smtp-test' ? <span className="animate-spin">⟳</span> : <Mail size={13} />}
+              Test SMTP
+            </button>
             <button onClick={handleSaveSMTP} disabled={busy === 'smtp'}
               className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-mono rounded-lg transition-all">
               {busy === 'smtp' ? <span className="animate-spin">⟳</span> : <Save size={13} />}

@@ -114,7 +114,10 @@ function ClientModal({ client, onSave, onClose }) {
             <F label="Contact Name" name="contact_name" placeholder="John Smith" />
             <F label="Phone" name="phone" placeholder="+46 70 000 0000" />
           </div>
-          <F label="Email" name="email" type="email" placeholder="contact@acme.com" />
+          <div>
+            <F label="Email" name="email" type="email" placeholder="contact@acme.com" />
+            <p className="mt-1 text-[10px] text-slate-500 font-mono">Assigned client emails also receive a notice when their VM/server is stopped.</p>
+          </div>
 
           {/* Billing */}
           <div className="pt-1 border-t border-slate-800">

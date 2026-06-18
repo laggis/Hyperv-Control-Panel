@@ -100,7 +100,10 @@ export const deleteUser = (id) => api.delete(`/auth/users/${id}`).then(r => r.da
 export const changePassword = (id, password) => api.put(`/auth/users/${id}/password`, { password }).then(r => r.data);
 export const updateUserRole = (id, role) => api.put(`/auth/users/${id}/role`, { role }).then(r => r.data);
 export const listUserVMs = (id) => api.get(`/auth/users/${id}/vms`).then(r => r.data);
-export const assignUserVM = (id, vm_name) => api.post(`/auth/users/${id}/vms`, { vm_name }).then(r => r.data);
+// Assign VM access through the email-manager route so a secure assignment email
+// can be sent to the user's saved email address. Passwords are never emailed.
+export const assignUserVM = (id, vm_name, options = {}) =>
+  api.post(`/vms/email-manager/users/${id}/vms`, { vm_name, ...options }).then(r => r.data);
 export const unassignUserVM = (id, vm_name) => api.delete(`/auth/users/${id}/vms/${encodeURIComponent(vm_name)}`).then(r => r.data);
 export const setUserDiscord = (id, discord_id) => api.put(`/auth/users/${id}/discord`, { discord_id }).then(r => r.data);
 export const getDiscordWhitelist = () => api.get('/auth/discord/whitelist').then(r => r.data);
@@ -156,6 +159,14 @@ export const setIsoFolder = (value) => api.put('/settings/iso_folder', { value }
 export const saveSMTP = (data) => api.put('/settings/smtp', data).then(r => r.data);
 export const setDiscordWhitelistEnabled = (enabled) => api.put('/settings/discord-whitelist', { enabled }).then(r => r.data);
 
+// Email notification manager
+export const getEmailManager = () => api.get('/vms/email-manager').then(r => r.data);
+export const updateEmailManagerUser = (userId, data) => api.put(`/vms/email-manager/users/${userId}`, data).then(r => r.data);
+export const getMyEmailNotifications = () => api.get('/vms/email-manager/me').then(r => r.data);
+export const saveMyEmailNotifications = (data) => api.put('/vms/email-manager/me', data).then(r => r.data);
+export const testStopEmail = (vmName) => api.post(`/vms/${encodeURIComponent(vmName)}/test-stop-email`).then(r => r.data);
+export const testSMTP = (to) => api.post('/vms/email-manager/test-smtp', { to }).then(r => r.data);
+
 // VM Management (create/delete)
 export const listSwitches = () => api.get('/vms-mgmt/switches').then(r => r.data);
 export const createVM = (data) => api.post('/vms-mgmt/create', data).then(r => r.data);
@@ -170,7 +181,35 @@ export const getVMDvd = (name) => api.get(`/isos/vm/${encodeURIComponent(name)}`
 export const setIsoFolderPath = (folder) => api.put('/isos/folder', { folder }).then(r => r.data);
 
 // Bandwidth
-export const getBandwidth = (vmName, hours = 24) => api.get(`/bandwidth/${encodeURIComponent(vmName)}`, { params: { hours } }).then(r => r.data);
+// The old endpoint was /bandwidth/:vmName, but this panel patch exposes the
+// fixed collector under the already-mounted VM router: /vms/:vmName/bandwidth.
+// Keep the returned value as an array so the existing chart component can keep
+// using data.length / data.map(...) without changes.
+const normalizeBandwidthPayload = (payload) => {
+  const rows = Array.isArray(payload)
+    ? payload
+    : (payload?.samples || payload?.data || payload?.points || []);
+
+  return rows.map(row => {
+    const inbound = Number(row.inbound_mbps ?? row.MbpsReceived ?? row.rx_mbps ?? row.incoming_mbps ?? row.inbound ?? row.rx ?? 0);
+    const outbound = Number(row.outbound_mbps ?? row.MbpsSent ?? row.tx_mbps ?? row.outgoing_mbps ?? row.outbound ?? row.tx ?? 0);
+    return {
+      ...row,
+      timestamp: row.timestamp || row.sample_time || row.created_at || row.time,
+      sample_time: row.sample_time || row.timestamp || row.created_at || row.time,
+      inbound_mbps: inbound,
+      outbound_mbps: outbound,
+      MbpsReceived: inbound,
+      MbpsSent: outbound,
+      inbound,
+      outbound,
+    };
+  });
+};
+
+export const getBandwidth = (vmName, hours = 24) =>
+  api.get(`/vms/${encodeURIComponent(vmName)}/bandwidth`, { params: { hours } })
+    .then(r => normalizeBandwidthPayload(r.data));
 
 // Alerts
 export const getAlerts = () => api.get('/alerts').then(r => r.data);
